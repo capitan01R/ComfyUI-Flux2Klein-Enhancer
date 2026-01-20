@@ -1,33 +1,29 @@
 """
-FLUX.2 Klein Conditioning Enhancer v2
+FLUX.2 Klein Conditioning Enhancer - Fixed Version
 
-Built from empirical diagnostic data:
-- Conditioning: [batch, 512, 12288]
-- Active text: positions 0-77 (std ~40.7)
-- Padding: positions 77-511 (std ~2.3)
-- Image edit mode: adds 'reference_latents' to metadata
+Architecture:
+- Shape: [batch, 512, 12288]
+- Active region: Dynamic (from attention_mask, typically ~77 tokens)
+- Padding: Remaining positions (low variance ~2.3)
+- Metadata: pooled_output, attention_mask, reference_latents (edit mode)
 
-Nodes:
-- Flux2KleinEnhancer: General enhancement for T2I and image edit
-- Flux2KleinEditController: Fine-grained control for image editing
-
-Key insight: Only positions 0-77 contain meaningful text embeddings.
-The rest is padding. All enhancement targets this active region only.
+FIXED: Previous version had mean-recentering that undid the scaling.
+This version uses direct operations with measurable effects.
 """
 
 from .flux2_klein_enhancer import (
     Flux2KleinEnhancer,
-    Flux2KleinEditController,
+    Flux2KleinDetailController,
 )
 
 NODE_CLASS_MAPPINGS = {
     "Flux2KleinEnhancer": Flux2KleinEnhancer,
-    "Flux2KleinEditController": Flux2KleinEditController,
+    "Flux2KleinDetailController": Flux2KleinDetailController,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "Flux2KleinEnhancer": "FLUX.2 Klein Enhancer",
-    "Flux2KleinEditController": "FLUX.2 Klein Edit Controller",
+    "Flux2KleinDetailController": "FLUX.2 Klein Detail Controller",
 }
 
-__version__ = "2.0.0"
+__version__ = "2.1.0"
