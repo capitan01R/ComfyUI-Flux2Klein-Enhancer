@@ -27,14 +27,19 @@ This node modifies only the active text region to affect prompt adherence and ed
 3. Restart ComfyUI
 
 ## Nodes
-
+    New Nodes Update #2.1.0
 <a href="examples/node_fixed.png">
   <img src="examples/node_fixed.png" alt="FLUX.2 Klein Enhancer" width="900">
 </a>
+
+  
 <a href="examples/sample.png">
   <img src="examples/sample.png" alt="FLUX.2 Klein Enhancer" width="900">
 </a>
+   
+   Temp Note: the workflow in this image is old.. Renamed parameters and functionality it explained below - will update workflow later.
 
+   
 ### FLUX.2 Klein Enhancer
 
 General-purpose conditioning enhancement for both text-to-image and image editing workflows.
