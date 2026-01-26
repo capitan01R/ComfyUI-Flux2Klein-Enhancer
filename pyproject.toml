@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-Flux2Klein-Enhancer"
 description = "Conditioning enhancement node for FLUX.2 Klein 9B in ComfyUI. Controls prompt adherence and image edit behavior by modifying the active text embedding region."
-version = "2.2.0"
+version = "2.3.0"
 license = {file = "LICENSE"} 
 # classifiers = [
 #     # For OS-independent nodes (works on all operating systems)
