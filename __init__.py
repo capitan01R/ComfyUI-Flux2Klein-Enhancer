@@ -32,4 +32,4 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "Flux2KleinSectionedEncoder": "FLUX.2 Klein Sectioned Encoder",
 }
 
-__version__ = "2.2.0"
+__version__ = "2.3.0"
