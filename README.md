@@ -342,7 +342,7 @@ Exact same workflow, seed and prompt - only difference is using the node or not.
 Click images to view full size.
 
 ### Source Photo
-[![Source](examples/source.jpg)](examples/source_02.jpg)
+[![Source](examples/source_02.jpg)](examples/source_02.jpg)
 
 
 ### Comparison 1
