@@ -124,7 +124,7 @@ Single slider to balance text conditioning vs. all reference images. Requires a 
 
 | Parameter | Default | Range | Description |
 |-----------|---------|-------|-------------|
-| `balance` | 0.005 | 0.000 to 1.000 | 0 = reference only, 0.5 = balanced, 1 = text only. |
+| `balance` | 0.500 | 0.000 to 1.000 | Adjusts the relative strength of text and reference conditioning. Values below `0.5` reduce text strength while keeping reference strength constant. Values above `0.5` reduce reference strength while keeping text strength constant. |
 | `debug` | False | True/False | Prints text and ref scale factors per block to console. |
 
 ### FLUX.2 Klein Ref Latent Weight
@@ -149,24 +149,14 @@ FLUX Klein has a consistency problem. Sometimes it nails the preservation of sub
 This node exposes preservation control that FLUX Klein doesn't provide. You can now control exactly how much original structure is maintained versus how much the prompt can modify the generation.
 
 ### The Modes
-
-#### dampen (Recommended)
-Reduces modification strength before applying changes. This is the most reliable mode for precise preservation.
-
-**For consistent identity/object preservation: 1.20 to 1.30**
-
-#### linear
-Applies full modifications, then blends the result back with the original.
-
-#### hybrid
-Dampens parameters first, then blends the result.
-
-#### blend_after
-Same as linear, just a different name.
+  - `dampen`: Reduces modification strength before applying changes. This is the most reliable mode for precise preservation. (Recommended)
+  - `linear`: Applies full modifications, then blends the result back with the original.
+  - `hybrid`: Dampens parameters first, then blends the result.
+  - `blend_after`: Same as `linear` (legacy naming).
 
 ### Usage
 
-- **1.20-1.30 (dampen)**: Recommended starting point for solid preservation
+- **1.20-1.30 (dampen)**: Recommended starting point for consistent identity/object preservation.
 - **1.40-1.50**: Tighter control when needed, very prompt-dependent
 - **0.0-1.0**: Standard range from full enhancement to balanced preservation
 
