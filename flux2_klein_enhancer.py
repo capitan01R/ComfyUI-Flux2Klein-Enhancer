@@ -192,7 +192,7 @@ class Flux2KleinEnhancer:
             # ============================================================
             # DAMPEN MODE: Apply preservation BEFORE modifications
             # ============================================================
-            if preserve_mode == "dampen" and preserve_original != 0.0:
+            if preserve_mode in ["dampen", "hybrid"] and preserve_original != 0.0:
                 # Calculate dampening factors for all operations
                 damping = 1.0 - preserve_original
                 
@@ -444,7 +444,7 @@ class Flux2KleinDetailController:
             # ============================================================
             # DAMPEN MODE: Apply preservation BEFORE regional operations
             # ============================================================
-            if preserve_mode == "dampen" and preserve_original != 0.0:
+            if preserve_mode in ["dampen", "hybrid"] and preserve_original != 0.0:
                 # Dampen the regional multipliers based on preserve_original
                 damping = 1.0 - preserve_original
                 
