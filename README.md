@@ -376,6 +376,8 @@ Same approach as the standard transfer node, with finer control: per-band streng
 
 ### FLUX.2 Klein Identity Feature Transfer V3
 
+![Identity Feature Transfer V3 process diagram](example_workflow/identity_feature_transfer_v3_diagram.svg)
+
 Shipment-ready identity preservation node for FLUX.2 Klein. This is the easier version to use.
 
 V3 uses a commit system instead of constantly averaging the generation toward the whole reference. Each generation token looks for the best matching reference token. If the same match stays stable, it locks to that match and then keeps a lighter anchor instead of continuing to pull hard every block.
