@@ -1,7 +1,7 @@
 [project]
 name = "ComfyUI-Flux2Klein-Enhancer"
 description = "Flux.2Klein 9B Enhancement Nodes Suite"
-version = "3.3.1"
+version = "3.3.2"
 license = {file = "LICENSE"} 
 # classifiers = [
 #     # For OS-independent nodes (works on all operating systems)
