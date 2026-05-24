@@ -1,5 +1,5 @@
-"""Identity Feature Transfer — Attention Output Steering."""
-
+import re
+from typing import Dict, List, Optional, Sequence, Tuple
 import torch
 import torch.nn.functional as F
 
@@ -772,14 +772,357 @@ class IdentityFeatureTransferV3:
         return (m,)
 
 
+HARD_DOUBLE = "0-7:mid_img=0.55"
+HARD_SINGLE = (
+    "0:mid_img=0.22; "
+    "1:mid_img=0.24; "
+    "3:mid_img=0.28; "
+    "4:mid_img=0.22; "
+    "6:mid_img=0.26; "
+    "7:mid_img=0.27; "
+    "8:mid_img=0.25; "
+    "10:mid_img=0.27; "
+    "13:mid_img=0.27"
+)
+
+
+class IdentityFeatureTransferFinal:
+    PRESETS = {
+        "HARD_LOCK": {
+            "double_blocks": HARD_DOUBLE,
+            "single_blocks": HARD_SINGLE,
+            "similarity_floor": 0.040,
+            "softmax_temperature": 0.0250,
+            "mask_threshold": 1.0,
+        },
+        "MID_LOCK": {
+            "double_blocks": HARD_DOUBLE,
+            "single_blocks": HARD_SINGLE,
+            "similarity_floor": 0.200,
+            "softmax_temperature": 0.0700,
+            "mask_threshold": 1.0,
+        },
+        "SOFT_LOCK": {
+            "double_blocks": HARD_DOUBLE,
+            "single_blocks": HARD_SINGLE,
+            "similarity_floor": 0.500,
+            "softmax_temperature": 0.0700,
+            "mask_threshold": 1.0,
+        },
+    }
+
+    @classmethod
+    def INPUT_TYPES(cls):
+        return {
+            "required": {
+                "model": ("MODEL",),
+                "preset": (["HARD_LOCK", "MID_LOCK", "SOFT_LOCK", "custom"], {"default": "HARD_LOCK"}),
+                "enabled": ("BOOLEAN", {"default": True}),
+                "reference_index": ("INT", {"default": 0, "min": 0, "max": 15, "step": 1}),
+                "reference_indices": ("STRING", {"default": "all", "multiline": False}),
+                "similarity_floor": ("FLOAT", {"default": 0.040, "min": 0.0, "max": 0.95, "step": 0.001}),
+                "softmax_temperature": ("FLOAT", {"default": 0.0250, "min": 0.0001, "max": 0.25, "step": 0.0001}),
+                "mask_threshold": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
+                "double_blocks": ("STRING", {"default": HARD_DOUBLE, "multiline": False}),
+                "single_blocks": ("STRING", {"default": HARD_SINGLE, "multiline": False}),
+                "total_sampling_steps": ("INT", {"default": 4, "min": 1, "max": 100, "step": 1}),
+                "debug": ("BOOLEAN", {"default": False}),
+            },
+            "optional": {
+                "subject_mask_1": ("MASK",),
+                "subject_mask_2": ("MASK",),
+                "subject_mask_3": ("MASK",),
+                "subject_mask_4": ("MASK",),
+                "subject_mask_5": ("MASK",),
+                "subject_mask_6": ("MASK",),
+                "subject_mask_7": ("MASK",),
+                "subject_mask_8": ("MASK",),
+            },
+        }
+
+    RETURN_TYPES = ("MODEL",)
+    FUNCTION = "apply"
+    CATEGORY = "conditioning/flux2klein"
+
+    @classmethod
+    def IS_CHANGED(cls, **kwargs):
+        return float("NaN")
+
+    @staticmethod
+    def _parse_ref_indices(text: str, count: int) -> List[int]:
+        if count <= 0:
+            return []
+        value = str(text or "all").strip().lower()
+        if value in ("", "all", "*"):
+            return list(range(count))
+        out = set()
+        for part in re.split(r"[;, ]+", value):
+            if not part:
+                continue
+            try:
+                if "-" in part:
+                    a, b = part.split("-", 1)
+                    lo, hi = int(a), int(b)
+                    if lo > hi:
+                        lo, hi = hi, lo
+                    for i in range(lo, hi + 1):
+                        if 0 <= i < count:
+                            out.add(i)
+                else:
+                    i = int(part)
+                    if 0 <= i < count:
+                        out.add(i)
+            except ValueError:
+                continue
+        return sorted(out)
+
+    @staticmethod
+    def _parse_schedule(text: str, max_block: int) -> Dict[int, float]:
+        out: Dict[int, float] = {}
+        for row in str(text or "").split(";"):
+            row = row.strip()
+            if not row or ":" not in row:
+                continue
+            block_part, value_part = row.split(":", 1)
+            value_part = value_part.strip()
+            if "=" in value_part:
+                key, value_part = value_part.split("=", 1)
+                if key.strip().lower() not in ("mid", "mid_img"):
+                    continue
+            try:
+                strength = float(value_part.strip())
+            except ValueError:
+                continue
+            try:
+                if "-" in block_part:
+                    lo_s, hi_s = block_part.split("-", 1)
+                    lo, hi = int(lo_s.strip()), int(hi_s.strip())
+                else:
+                    lo = hi = int(block_part.strip())
+            except ValueError:
+                continue
+            if lo > hi:
+                lo, hi = hi, lo
+            lo = max(0, lo)
+            hi = min(max_block, hi)
+            for idx in range(lo, hi + 1):
+                out[idx] = strength
+        return out
+
+    @staticmethod
+    def _prep_mask(mask: Optional[torch.Tensor]) -> Optional[torch.Tensor]:
+        if mask is None or not torch.is_tensor(mask):
+            return None
+        x = mask.detach().float().cpu()
+        if x.dim() == 4:
+            if x.shape[-1] in (1, 3, 4):
+                x = x[0].mean(dim=-1)
+            else:
+                x = x[0, 0]
+        elif x.dim() == 3:
+            if x.shape[-1] in (1, 3, 4) and x.shape[0] != 1:
+                x = x.mean(dim=-1)
+            else:
+                x = x[0]
+        elif x.dim() != 2:
+            return None
+        return x.contiguous()
+
+    @staticmethod
+    def _grid_for_tokens(count: int, mask: torch.Tensor) -> Tuple[int, int]:
+        count = max(1, int(count))
+        mh, mw = mask.shape[-2:]
+        target = mh / max(mw, 1)
+        best = (1, count)
+        best_err = float("inf")
+        for h in range(1, int(count ** 0.5) + 3):
+            if count % h != 0:
+                continue
+            w = count // h
+            for hh, ww in ((h, w), (w, h)):
+                err = abs((hh / max(ww, 1)) - target)
+                if err < best_err:
+                    best = (hh, ww)
+                    best_err = err
+        return best
+
+    def apply(
+        self,
+        model,
+        preset="HARD_LOCK",
+        enabled=True,
+        reference_index=0,
+        reference_indices="all",
+        similarity_floor=0.040,
+        softmax_temperature=0.0250,
+        mask_threshold=1.0,
+        double_blocks=HARD_DOUBLE,
+        single_blocks=HARD_SINGLE,
+        total_sampling_steps=4,
+        debug=False,
+        subject_mask_1=None,
+        subject_mask_2=None,
+        subject_mask_3=None,
+        subject_mask_4=None,
+        subject_mask_5=None,
+        subject_mask_6=None,
+        subject_mask_7=None,
+        subject_mask_8=None,
+    ):
+        m = model.clone()
+        if not bool(enabled):
+            return (m,)
+
+        if preset in self.PRESETS:
+            cfg = self.PRESETS[preset]
+            double_blocks = cfg["double_blocks"]
+            single_blocks = cfg["single_blocks"]
+            similarity_floor = cfg["similarity_floor"]
+            softmax_temperature = cfg["softmax_temperature"]
+            mask_threshold = cfg["mask_threshold"]
+
+        double_map = self._parse_schedule(double_blocks, 7)
+        single_map = self._parse_schedule(single_blocks, 23)
+        sim_floor = float(max(0.0, min(0.95, similarity_floor)))
+        temperature = float(max(1e-6, softmax_temperature))
+        mask_threshold = float(max(0.0, min(1.0, mask_threshold)))
+        ref_idx = int(reference_index)
+        ref_indices_text = str(reference_indices)
+
+        masks = [
+            self._prep_mask(subject_mask_1),
+            self._prep_mask(subject_mask_2),
+            self._prep_mask(subject_mask_3),
+            self._prep_mask(subject_mask_4),
+            self._prep_mask(subject_mask_5),
+            self._prep_mask(subject_mask_6),
+            self._prep_mask(subject_mask_7),
+            self._prep_mask(subject_mask_8),
+        ]
+        mask_cache: Dict[Tuple[int, int, float], Optional[torch.Tensor]] = {}
+
+        def mask_indices(ref_id: int, count: int, device):
+            if ref_id < 0 or ref_id >= len(masks):
+                return None
+            src = masks[ref_id]
+            if src is None:
+                return None
+            key = (ref_id, int(count), mask_threshold)
+            if key in mask_cache:
+                cached = mask_cache[key]
+                return cached.to(device) if cached is not None else None
+            grid = self._grid_for_tokens(int(count), src)
+            pooled = F.adaptive_avg_pool2d(src[None, None], grid).view(-1)
+            keep = pooled >= mask_threshold
+            if keep.sum().item() == 0:
+                mask_cache[key] = torch.empty((0,), dtype=torch.long)
+            else:
+                mask_cache[key] = torch.nonzero(keep, as_tuple=False).squeeze(-1).to(torch.long).cpu()
+            return mask_cache[key].to(device)
+
+        def selected_ref_slices(ref_tokens: Sequence[int], base: int):
+            selected = self._parse_ref_indices(ref_indices_text, len(ref_tokens))
+            if not selected:
+                selected = [min(max(ref_idx, 0), len(ref_tokens) - 1)]
+            selected_set = set(selected)
+            slices = []
+            offset = 0
+            for i, count in enumerate(ref_tokens):
+                start = base + offset
+                end = start + int(count)
+                if i in selected_set and end > start:
+                    slices.append((i, start, end))
+                offset += int(count)
+            return slices
+
+        def reference_bank(tokens: torch.Tensor, slices):
+            parts = []
+            for ref_id, start, end in slices:
+                ref = tokens[:, start:end]
+                idx = mask_indices(ref_id, end - start, tokens.device)
+                if idx is not None:
+                    if idx.numel() == 0:
+                        continue
+                    ref = ref.index_select(1, idx.to(torch.long))
+                if ref.shape[1] > 0:
+                    parts.append(ref)
+            if not parts:
+                return None
+            return torch.cat(parts, dim=1)
+
+        def pull_delta(gen: torch.Tensor, ref: torch.Tensor, strength: float):
+            if strength <= 0.0 or ref is None or ref.shape[1] <= 0:
+                return None
+            gen_f = gen.float()
+            ref_f = ref.float()
+            gen_norm = F.normalize(gen_f - gen_f.mean(dim=1, keepdim=True), dim=-1)
+            ref_norm = F.normalize(ref_f - ref_f.mean(dim=1, keepdim=True), dim=-1)
+            sim = torch.bmm(gen_norm, ref_norm.transpose(1, 2))
+            neg = torch.finfo(sim.dtype).min
+            sim = torch.where(sim >= sim_floor, sim, torch.full_like(sim, neg))
+            weights = torch.softmax(sim / temperature, dim=-1)
+            weights = torch.nan_to_num(weights, nan=0.0)
+            pooled = torch.bmm(weights, ref_f)
+            best = sim.max(dim=-1).values
+            best = torch.where(torch.isfinite(best), best, torch.zeros_like(best))
+            confidence = ((best - sim_floor) / max(1.0 - sim_floor, 1e-6)).clamp(0.0, 1.0)
+            weight = (confidence * float(strength)).unsqueeze(-1).to(gen.dtype)
+            return (pooled.to(gen.dtype) - gen) * weight
+
+        def output_patch(attn, extra_options):
+            ref_tokens = extra_options.get("reference_image_num_tokens", []) or []
+            img_slice = extra_options.get("img_slice")
+            if not ref_tokens or img_slice is None:
+                return attn
+            block_type = extra_options.get("block_type", "double")
+            block_idx = int(extra_options.get("block_index", 0))
+            if block_type == "double":
+                strength = double_map.get(block_idx, 0.0)
+            elif block_type == "single":
+                strength = single_map.get(block_idx, 0.0)
+            else:
+                return attn
+            if strength == 0.0:
+                return attn
+            txt_end, total_seq = int(img_slice[0]), int(img_slice[1])
+            total_ref = int(sum(ref_tokens))
+            gen_start = txt_end
+            gen_end = total_seq - total_ref
+            if gen_end <= gen_start:
+                return attn
+            ref = reference_bank(attn, selected_ref_slices(ref_tokens, total_seq - total_ref))
+            if ref is None:
+                return attn
+            gen = attn[:, gen_start:gen_end]
+            delta = pull_delta(gen, ref, strength)
+            if delta is None:
+                return attn
+            out = attn.clone()
+            out[:, gen_start:gen_end] = gen + delta
+            return out
+
+        if bool(debug):
+            print(
+                "[IdentityFeatureTransferFinal] "
+                f"preset={preset} sim={sim_floor:.4f} temp={temperature:.4f} "
+                f"mask={mask_threshold:.2f} steps={int(total_sampling_steps)} "
+                f"double={double_map} single={single_map}"
+            )
+
+        m.set_model_attn1_output_patch(output_patch)
+        return (m,)
+
+
 NODE_CLASS_MAPPINGS = {
     "IdentityFeatureTransfer": IdentityFeatureTransfer,
     "IdentityFeatureTransferAdvanced": IdentityFeatureTransferAdvanced,
     "IdentityFeatureTransferV3": IdentityFeatureTransferV3,
+    "IdentityFeatureTransferFinal": IdentityFeatureTransferFinal,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
     "IdentityFeatureTransfer": "FLUX.2 Klein Identity Feature Transfer",
     "IdentityFeatureTransferAdvanced": "FLUX.2 Klein Identity Feature Transfer Advanced",
     "IdentityFeatureTransferV3": "FLUX.2 Klein Identity Feature Transfer V3",
+    "IdentityFeatureTransferFinal": "Identity Feature Transfer Final",
 }
