@@ -39,12 +39,7 @@ class MultiReferenceLatent:
     def IS_CHANGED(cls, **kwargs):
         return float("NaN")
 
-    def apply(
-        self,
-        conditioning,
-        latent_1,
-        **optional,
-    ):
+    def apply(self, conditioning, latent_1, **optional):
         refs = []
         for _, latent in [("latent_1", latent_1)] + sorted(optional.items()):
             z = _samples(latent)
@@ -62,14 +57,13 @@ class MultiReferenceLatent:
             meta["reference_latents"] = list(refs)
             meta["reference_latents_method"] = "index"
             out.append([cond, meta])
-
         return (out,)
 
 
 NODE_CLASS_MAPPINGS = {
-    "MultiReferenceLatent": MultiReferenceLatent,
+    "Flux2KleinMultiReferenceLatent": MultiReferenceLatent,
 }
 
 NODE_DISPLAY_NAME_MAPPINGS = {
-    "MultiReferenceLatent": "Multi ReferenceLatent",
+    "Flux2KleinMultiReferenceLatent": "Multi ReferenceLatent",
 }
