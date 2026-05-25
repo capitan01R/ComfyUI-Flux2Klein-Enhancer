@@ -1,8 +1,8 @@
 {
   "id": "ca63c430-fe83-43a6-b3da-633767239d9b",
   "revision": 0,
-  "last_node_id": 318,
-  "last_link_id": 934,
+  "last_node_id": 319,
+  "last_link_id": 940,
   "nodes": [
     {
       "id": 45,
@@ -119,7 +119,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            930
+            937
           ]
         }
       ],
@@ -448,7 +448,7 @@
         {
           "name": "positive",
           "type": "CONDITIONING",
-          "link": 859
+          "link": 940
         },
         {
           "name": "negative",
@@ -537,7 +537,7 @@
           "type": "CONDITIONING",
           "links": [
             840,
-            855
+            935
           ]
         }
       ],
@@ -620,7 +620,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            863
+            936
           ]
         }
       ],
@@ -862,90 +862,6 @@
       ]
     },
     {
-      "id": 294,
-      "type": "MultiReferenceLatent",
-      "pos": [
-        1228.2829000000004,
-        778.3980500000005
-      ],
-      "size": [
-        219.283203125,
-        186
-      ],
-      "flags": {},
-      "order": 20,
-      "mode": 0,
-      "inputs": [
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "link": 855
-        },
-        {
-          "name": "latent_1",
-          "type": "LATENT",
-          "link": 863
-        },
-        {
-          "name": "latent_2",
-          "shape": 7,
-          "type": "LATENT",
-          "link": 930
-        },
-        {
-          "name": "latent_3",
-          "shape": 7,
-          "type": "LATENT",
-          "link": 933
-        },
-        {
-          "name": "latent_4",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        },
-        {
-          "name": "latent_5",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        },
-        {
-          "name": "latent_6",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        },
-        {
-          "name": "latent_7",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        },
-        {
-          "name": "latent_8",
-          "shape": 7,
-          "type": "LATENT",
-          "link": null
-        }
-      ],
-      "outputs": [
-        {
-          "name": "conditioning",
-          "type": "CONDITIONING",
-          "links": [
-            859
-          ]
-        }
-      ],
-      "properties": {
-        "Node name for S&R": "MultiReferenceLatent",
-        "cnr_id": "comfyui-flux2klein-enhancer",
-        "ver": "3.2.0"
-      },
-      "widgets_values": []
-    },
-    {
       "id": 315,
       "type": "IdentityFeatureTransferFinal",
       "pos": [
@@ -1153,7 +1069,7 @@
           "name": "LATENT",
           "type": "LATENT",
           "links": [
-            933
+            938
           ]
         }
       ],
@@ -1214,6 +1130,87 @@
         "Node name for S&R": "GetImageSize+"
       },
       "widgets_values": []
+    },
+    {
+      "id": 319,
+      "type": "Flux2KleinMultiReferenceLatent",
+      "pos": [
+        1260.7251999390878,
+        773.6668179474234
+      ],
+      "size": [
+        185.0953125,
+        186
+      ],
+      "flags": {},
+      "order": 20,
+      "mode": 0,
+      "inputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "link": 935
+        },
+        {
+          "name": "latent_1",
+          "type": "LATENT",
+          "link": 936
+        },
+        {
+          "name": "latent_2",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 937
+        },
+        {
+          "name": "latent_3",
+          "shape": 7,
+          "type": "LATENT",
+          "link": 938
+        },
+        {
+          "name": "latent_4",
+          "shape": 7,
+          "type": "LATENT",
+          "link": null
+        },
+        {
+          "name": "latent_5",
+          "shape": 7,
+          "type": "LATENT",
+          "link": null
+        },
+        {
+          "name": "latent_6",
+          "shape": 7,
+          "type": "LATENT",
+          "link": null
+        },
+        {
+          "name": "latent_7",
+          "shape": 7,
+          "type": "LATENT",
+          "link": null
+        },
+        {
+          "name": "latent_8",
+          "shape": 7,
+          "type": "LATENT",
+          "link": null
+        }
+      ],
+      "outputs": [
+        {
+          "name": "conditioning",
+          "type": "CONDITIONING",
+          "links": [
+            940
+          ]
+        }
+      ],
+      "properties": {
+        "Node name for S&R": "Flux2KleinMultiReferenceLatent"
+      }
     }
   ],
   "links": [
@@ -1338,30 +1335,6 @@
       "CONDITIONING"
     ],
     [
-      855,
-      51,
-      0,
-      294,
-      0,
-      "CONDITIONING"
-    ],
-    [
-      859,
-      294,
-      0,
-      34,
-      1,
-      "CONDITIONING"
-    ],
-    [
-      863,
-      261,
-      0,
-      294,
-      1,
-      "LATENT"
-    ],
-    [
       864,
       260,
       0,
@@ -1466,14 +1439,6 @@
       "CONDITIONING"
     ],
     [
-      930,
-      270,
-      0,
-      294,
-      2,
-      "LATENT"
-    ],
-    [
       931,
       316,
       0,
@@ -1490,20 +1455,52 @@
       "IMAGE"
     ],
     [
-      933,
-      318,
-      0,
-      294,
-      3,
-      "LATENT"
-    ],
-    [
       934,
       27,
       0,
       318,
       1,
       "VAE"
+    ],
+    [
+      935,
+      51,
+      0,
+      319,
+      0,
+      "CONDITIONING"
+    ],
+    [
+      936,
+      261,
+      0,
+      319,
+      1,
+      "LATENT"
+    ],
+    [
+      937,
+      270,
+      0,
+      319,
+      2,
+      "LATENT"
+    ],
+    [
+      938,
+      318,
+      0,
+      319,
+      3,
+      "LATENT"
+    ],
+    [
+      940,
+      319,
+      0,
+      34,
+      1,
+      "CONDITIONING"
     ]
   ],
   "groups": [
@@ -1654,10 +1651,10 @@
   "config": {},
   "extra": {
     "ds": {
-      "scale": 0.46650738020973365,
+      "scale": 0.8264462809917358,
       "offset": [
-        319.4583267428281,
-        305.73789221547844
+        91.1867238109114,
+        40.6104125525767
       ]
     },
     "frontendVersion": "1.42.11",
