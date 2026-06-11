@@ -37,7 +37,7 @@ class MultiReferenceLatent:
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
-        return float("NaN")
+        return False
 
     def apply(self, conditioning, latent_1, **optional):
         refs = []

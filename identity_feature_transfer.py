@@ -538,7 +538,7 @@ class IdentityFeatureTransferV3:
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
-        return float("NaN")
+        return False
 
     @staticmethod
     def _parse_schedule(text, max_block):
@@ -846,7 +846,7 @@ class IdentityFeatureTransferFinal:
 
     @classmethod
     def IS_CHANGED(cls, **kwargs):
-        return float("NaN")
+        return False
 
     @staticmethod
     def _parse_ref_indices(text: str, count: int) -> List[int]:
