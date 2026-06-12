@@ -825,10 +825,17 @@ class IdentityFeatureTransferFinal:
                 "mask_threshold": ("FLOAT", {"default": 1.0, "min": 0.0, "max": 1.0, "step": 0.01}),
                 "double_blocks": ("STRING", {"default": HARD_DOUBLE, "multiline": False}),
                 "single_blocks": ("STRING", {"default": HARD_SINGLE, "multiline": False}),
-                "total_sampling_steps": ("INT", {"default": 4, "min": 1, "max": 100, "step": 1}),
                 "debug": ("BOOLEAN", {"default": False}),
             },
             "optional": {
+                "sigmas": ("SIGMAS", {
+                    "forceInput": True,
+                    "tooltip": (
+                        "Optional sampler sigma schedule. When connected, the "
+                        "existing block strengths decay per sampling step by "
+                        "delta_sigma_0 / delta_sigma_step."
+                    ),
+                }),
                 "subject_mask_1": ("MASK",),
                 "subject_mask_2": ("MASK",),
                 "subject_mask_3": ("MASK",),
@@ -946,6 +953,63 @@ class IdentityFeatureTransferFinal:
                     best_err = err
         return best
 
+    @staticmethod
+    def _scalar_float(value) -> Optional[float]:
+        if value is None:
+            return None
+        try:
+            if torch.is_tensor(value):
+                if value.numel() == 0:
+                    return None
+                return float(value.detach().flatten()[0].double().cpu().item())
+            return float(value)
+        except (TypeError, ValueError, RuntimeError):
+            return None
+
+    @staticmethod
+    def _sigma_equal_energy_schedule(sigmas):
+        if sigmas is None:
+            return None
+        if not torch.is_tensor(sigmas):
+            raise ValueError("Identity Feature Transfer Final: sigmas must be a SIGMAS tensor.")
+
+        values = sigmas.detach().flatten().double().cpu()
+        if values.numel() < 2:
+            raise ValueError("Identity Feature Transfer Final: at least two sigma values are required.")
+        if not torch.isfinite(values).all().item():
+            raise ValueError("Identity Feature Transfer Final: sigma schedule contains a non-finite value.")
+
+        deltas = (values[:-1] - values[1:]).abs()
+        if deltas[0].item() <= 0.0:
+            raise ValueError("Identity Feature Transfer Final: Step 0 sigma interval must be greater than zero.")
+        zero_steps = torch.nonzero(deltas <= 0.0, as_tuple=False).flatten()
+        if zero_steps.numel() > 0:
+            step = int(zero_steps[0].item())
+            raise ValueError(
+                f"Identity Feature Transfer Final: sigma interval for step {step} is zero."
+            )
+
+        ratios = deltas[0] / deltas
+        return values, ratios
+
+    @staticmethod
+    def _sigma_step_index(values: torch.Tensor, current_sigma: float) -> int:
+        step_values = values[:-1]
+        differences = torch.abs(step_values - float(current_sigma))
+        tolerance = max(1e-7, abs(float(current_sigma)) * 1e-6)
+        exact = torch.nonzero(differences <= tolerance, as_tuple=False).flatten()
+        if exact.numel() > 0:
+            return int(exact[0].item())
+
+        for step_idx in range(values.numel() - 1):
+            start = float(values[step_idx].item())
+            end = float(values[step_idx + 1].item())
+            lo, hi = min(start, end), max(start, end)
+            if lo <= float(current_sigma) <= hi:
+                return step_idx
+
+        return int(torch.argmin(differences).item())
+
     def apply(
         self,
         model,
@@ -958,7 +1022,6 @@ class IdentityFeatureTransferFinal:
         mask_threshold=1.0,
         double_blocks=HARD_DOUBLE,
         single_blocks=HARD_SINGLE,
-        total_sampling_steps=4,
         debug=False,
         subject_mask_1=None,
         subject_mask_2=None,
@@ -968,6 +1031,7 @@ class IdentityFeatureTransferFinal:
         subject_mask_6=None,
         subject_mask_7=None,
         subject_mask_8=None,
+        sigmas=None,
     ):
         m = model.clone()
         if not bool(enabled):
@@ -988,6 +1052,28 @@ class IdentityFeatureTransferFinal:
         mask_threshold = float(max(0.0, min(1.0, mask_threshold)))
         ref_idx = int(reference_index)
         ref_indices_text = str(reference_indices)
+        sigma_schedule = self._sigma_equal_energy_schedule(sigmas)
+        sigma_debug_seen = set()
+        sigma_missing_warned = False
+
+        def sigma_strength_multiplier(extra_options):
+            nonlocal sigma_missing_warned
+            if sigma_schedule is None:
+                return 1.0, None, None
+
+            current_sigma = self._scalar_float(extra_options.get("sigmas"))
+            if current_sigma is None:
+                if debug and not sigma_missing_warned:
+                    sigma_missing_warned = True
+                    print(
+                        "[IdentityFeatureTransferFinal] SIGMAS connected, but "
+                        "the current model sigma is unavailable; using unscaled strengths."
+                    )
+                return 1.0, None, None
+
+            values, ratios = sigma_schedule
+            step_idx = self._sigma_step_index(values, current_sigma)
+            return float(ratios[step_idx].item()), step_idx, current_sigma
 
         masks = [
             self._prep_mask(subject_mask_1),
@@ -1082,8 +1168,17 @@ class IdentityFeatureTransferFinal:
                 strength = single_map.get(block_idx, 0.0)
             else:
                 return attn
+            sigma_multiplier, sigma_step, current_sigma = sigma_strength_multiplier(extra_options)
+            strength *= sigma_multiplier
             if strength == 0.0:
                 return attn
+            if debug and sigma_step is not None and sigma_step not in sigma_debug_seen:
+                sigma_debug_seen.add(sigma_step)
+                print(
+                    "[IdentityFeatureTransferFinal sigma] "
+                    f"step={sigma_step} sigma={current_sigma:.7f} "
+                    f"strength_multiplier={sigma_multiplier:.7f}"
+                )
             txt_end, total_seq = int(img_slice[0]), int(img_slice[1])
             total_ref = int(sum(ref_tokens))
             gen_start = txt_end
@@ -1105,8 +1200,9 @@ class IdentityFeatureTransferFinal:
             print(
                 "[IdentityFeatureTransferFinal] "
                 f"preset={preset} sim={sim_floor:.4f} temp={temperature:.4f} "
-                f"mask={mask_threshold:.2f} steps={int(total_sampling_steps)} "
-                f"double={double_map} single={single_map}"
+                f"mask={mask_threshold:.2f} "
+                f"double={double_map} single={single_map} "
+                f"sigma_aware={sigma_schedule is not None}"
             )
 
         m.set_model_attn1_output_patch(output_patch)
