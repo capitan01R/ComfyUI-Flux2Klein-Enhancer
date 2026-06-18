@@ -15,11 +15,11 @@ body:
   ```
 
 * type: textarea
-  id: summary
+  id: what_happened
   attributes:
   label: What happened?
   description: Briefly describe the problem.
-  placeholder: "Example: The node loads, but generation stops with an error when using Flux2Klein KSampler."
+  placeholder: "Example: The node loads, but generation stops with an error."
   validations:
   required: true
 
@@ -41,20 +41,20 @@ body:
   id: error_log
   attributes:
   label: Error log
-  description: Paste the full error if there is one.
-  placeholder: "Paste terminal / console error here."
+  description: Paste the terminal/console error if there is one.
+  placeholder: "Paste full error here."
   render: shell
   validations:
-  required: true
+  required: false
 
-* type: upload
+* type: textarea
   id: files
   attributes:
   label: Workflow / screenshot
-  description: Upload the workflow JSON or a screenshot if it helps.
+  description: Drag and drop the workflow JSON, screenshot, or log file here if it helps.
+  placeholder: "Drop files here or paste extra context."
   validations:
   required: false
-  accept: ".json,.png,.jpg,.jpeg,.webp,.log,.txt,.zip"
 
 * type: textarea
   id: steps
@@ -73,5 +73,5 @@ body:
   attributes:
   label: Quick check
   options:
-  - label: I can reproduce this issue with the information above.
+  - label: I can reproduce this with the information above.
   required: true
