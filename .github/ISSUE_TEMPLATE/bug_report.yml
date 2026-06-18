@@ -1,113 +1,77 @@
 name: Bug report
-description: Report a reproducible crash, error, or broken node behavior.
+description: Report a reproducible problem with the node.
 title: "[Bug]: "
 labels: ["bug", "needs-repro"]
+
 body:
-  - type: markdown
-    attributes:
-      value: |
-        ## Read before posting
 
-        This form is for reproducible bugs only.
+* type: markdown
+  attributes:
+  value: |
+  Thanks for reporting a problem.
 
-        Usage questions, workflow requests, install confusion, model questions, and suggestions are not bugs.
-        Issues missing logs, workflow, version info, or reproduction steps may be closed without investigation.
+  ```
+  For usage questions, workflow help, or suggestions, please use Discussions instead.
+  ```
 
-  - type: input
-    id: comfyui_commit
-    attributes:
-      label: ComfyUI commit
-      description: Paste the ComfyUI commit hash you are using.
-      placeholder: "Example: 4f8a1c2..."
-    validations:
-      required: true
+* type: textarea
+  id: summary
+  attributes:
+  label: What happened?
+  description: Briefly describe the problem.
+  placeholder: "Example: The node loads, but generation stops with an error when using Flux2Klein KSampler."
+  validations:
+  required: true
 
-  - type: input
-    id: node_version
-    attributes:
-      label: Node version / commit
-      description: Paste the commit hash or version of ComfyUI-Flux2Klein-Enhancer.
-      placeholder: "Example: latest main / commit hash / release version"
-    validations:
-      required: true
+* type: textarea
+  id: setup
+  attributes:
+  label: Setup
+  description: Paste the basics if you know them.
+  value: |
+  ComfyUI commit:
+  Node commit/version:
+  OS:
+  GPU:
+  Python / torch:
+  validations:
+  required: false
 
-  - type: dropdown
-    id: operating_system
-    attributes:
-      label: OS
-      description: What operating system are you using?
-      options:
-        - Windows
-        - Linux
-        - macOS
-        - Other
-    validations:
-      required: true
+* type: textarea
+  id: error_log
+  attributes:
+  label: Error log
+  description: Paste the full error if there is one.
+  placeholder: "Paste terminal / console error here."
+  render: shell
+  validations:
+  required: true
 
-  - type: input
-    id: gpu
-    attributes:
-      label: GPU
-      description: Include GPU model and VRAM amount.
-      placeholder: "Example: RTX 3090 24GB"
-    validations:
-      required: true
+* type: upload
+  id: files
+  attributes:
+  label: Workflow / screenshot
+  description: Upload the workflow JSON or a screenshot if it helps.
+  validations:
+  required: false
+  accept: ".json,.png,.jpg,.jpeg,.webp,.log,.txt,.zip"
 
-  - type: input
-    id: python_torch
-    attributes:
-      label: Python / torch version
-      description: Paste your Python and PyTorch versions.
-      placeholder: "Example: Python 3.11.9 / torch 2.7.1+cu128"
-    validations:
-      required: true
+* type: textarea
+  id: steps
+  attributes:
+  label: Steps to reproduce
+  description: What should I do to trigger the same problem?
+  value: |
+  1.
+  2.
+  3.
+  validations:
+  required: true
 
-  - type: textarea
-    id: error_log
-    attributes:
-      label: Full error log
-      description: Paste the complete terminal error, not only the last line.
-      placeholder: "Paste full traceback / console output here."
-      render: shell
-    validations:
-      required: true
-
-  - type: upload
-    id: workflow_json
-    attributes:
-      label: Workflow JSON
-      description: Upload the exact workflow JSON that reproduces the issue.
-    validations:
-      required: true
-      accept: ".json,.zip,.txt"
-
-  - type: upload
-    id: screenshot
-    attributes:
-      label: Screenshot
-      description: Upload a screenshot of the node/workflow/error if relevant.
-    validations:
-      required: false
-      accept: ".png,.jpg,.jpeg,.webp,.gif"
-
-  - type: textarea
-    id: repro_steps
-    attributes:
-      label: Exact steps to reproduce
-      description: List the exact actions needed to trigger the bug.
-      value: |
-        1.
-        2.
-        3.
-    validations:
-      required: true
-
-  - type: checkboxes
-    id: confirmation
-    attributes:
-      label: Confirmation
-      options:
-        - label: I confirm this is a reproducible bug, not a usage question or feature request.
-          required: true
-        - label: I included the full error log and exact workflow needed to reproduce the issue.
-          required: true
+* type: checkboxes
+  id: confirm
+  attributes:
+  label: Quick check
+  options:
+  - label: I can reproduce this issue with the information above.
+  required: true
