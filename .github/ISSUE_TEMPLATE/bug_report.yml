@@ -1,77 +1,75 @@
 name: Bug report
 description: Report a reproducible problem with the node.
 title: "[Bug]: "
-labels: ["bug", "needs-repro"]
-
+labels:
+  - bug
+  - needs-repro
 body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting a problem.
 
-* type: markdown
-  attributes:
-  value: |
-  Thanks for reporting a problem.
+        For usage questions, workflow help, or suggestions, please use Discussions instead.
 
-  ```
-  For usage questions, workflow help, or suggestions, please use Discussions instead.
-  ```
+  - type: textarea
+    id: what_happened
+    attributes:
+      label: What happened?
+      description: Briefly describe the problem.
+      placeholder: The node loads, but generation stops with an error.
+    validations:
+      required: true
 
-* type: textarea
-  id: what_happened
-  attributes:
-  label: What happened?
-  description: Briefly describe the problem.
-  placeholder: "Example: The node loads, but generation stops with an error."
-  validations:
-  required: true
+  - type: textarea
+    id: setup
+    attributes:
+      label: Setup
+      description: Paste the basics if you know them.
+      value: |
+        ComfyUI commit:
+        Node commit/version:
+        OS:
+        GPU:
+        Python / torch:
+    validations:
+      required: false
 
-* type: textarea
-  id: setup
-  attributes:
-  label: Setup
-  description: Paste the basics if you know them.
-  value: |
-  ComfyUI commit:
-  Node commit/version:
-  OS:
-  GPU:
-  Python / torch:
-  validations:
-  required: false
+  - type: textarea
+    id: error_log
+    attributes:
+      label: Error log
+      description: Paste the terminal or console error if there is one.
+      placeholder: Paste full error here.
+      render: shell
+    validations:
+      required: false
 
-* type: textarea
-  id: error_log
-  attributes:
-  label: Error log
-  description: Paste the terminal/console error if there is one.
-  placeholder: "Paste full error here."
-  render: shell
-  validations:
-  required: false
+  - type: textarea
+    id: workflow_screenshot
+    attributes:
+      label: Workflow / screenshot
+      description: Drag and drop the workflow JSON, screenshot, or log file here if it helps.
+      placeholder: Drop files here or paste extra context.
+    validations:
+      required: false
 
-* type: textarea
-  id: files
-  attributes:
-  label: Workflow / screenshot
-  description: Drag and drop the workflow JSON, screenshot, or log file here if it helps.
-  placeholder: "Drop files here or paste extra context."
-  validations:
-  required: false
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: What should I do to trigger the same problem?
+      value: |
+        1.
+        2.
+        3.
+    validations:
+      required: true
 
-* type: textarea
-  id: steps
-  attributes:
-  label: Steps to reproduce
-  description: What should I do to trigger the same problem?
-  value: |
-  1.
-  2.
-  3.
-  validations:
-  required: true
-
-* type: checkboxes
-  id: confirm
-  attributes:
-  label: Quick check
-  options:
-  - label: I can reproduce this with the information above.
-  required: true
+  - type: checkboxes
+    id: confirm
+    attributes:
+      label: Quick check
+      options:
+        - label: I can reproduce this with the information above.
+          required: true
