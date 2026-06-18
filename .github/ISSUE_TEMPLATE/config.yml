@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Usage questions / workflow help
+    url: https://github.com/capitan01R/ComfyUI-Flux2Klein-Enhancer/discussions
+    about: Use Discussions for questions, workflow help, and non-bug support.
