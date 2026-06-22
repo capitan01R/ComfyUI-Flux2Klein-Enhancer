@@ -48,5 +48,5 @@ NODE_DISPLAY_NAME_MAPPINGS = {
     "IdentityFeatureTransferFinal": "Identity Feature Transfer Final",
 }
 
-__version__ = "3.4.0"
+__version__ = "3.4.1"
 __all__ = ["NODE_CLASS_MAPPINGS", "NODE_DISPLAY_NAME_MAPPINGS"]
