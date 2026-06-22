@@ -826,6 +826,10 @@ class IdentityFeatureTransferFinal:
                 "double_blocks": ("STRING", {"default": HARD_DOUBLE, "multiline": False}),
                 "single_blocks": ("STRING", {"default": HARD_SINGLE, "multiline": False}),
                 "debug": ("BOOLEAN", {"default": False}),
+                "mask_behavior": (["focus_only", "zero_unmasked_tokens"], {
+                    "default": "focus_only",
+                    "tooltip": "focus_only preserves the original masking behavior: the mask limits this node's reference bank while Klein still sees the complete reference. zero_unmasked_tokens blocks each wired reference's unmasked tokens as attention sources in every block. References without a wired mask remain complete and unchanged.",
+                }),
             },
             "optional": {
                 "sigmas": ("SIGMAS", {
@@ -1023,6 +1027,7 @@ class IdentityFeatureTransferFinal:
         double_blocks=HARD_DOUBLE,
         single_blocks=HARD_SINGLE,
         debug=False,
+        mask_behavior="focus_only",
         subject_mask_1=None,
         subject_mask_2=None,
         subject_mask_3=None,
@@ -1052,6 +1057,9 @@ class IdentityFeatureTransferFinal:
         mask_threshold = float(max(0.0, min(1.0, mask_threshold)))
         ref_idx = int(reference_index)
         ref_indices_text = str(reference_indices)
+        mask_behavior = str(mask_behavior)
+        if mask_behavior not in ("focus_only", "zero_unmasked_tokens"):
+            mask_behavior = "focus_only"
         sigma_schedule = self._sigma_equal_energy_schedule(sigmas)
         sigma_debug_seen = set()
         sigma_missing_warned = False
@@ -1136,6 +1144,61 @@ class IdentityFeatureTransferFinal:
                 return None
             return torch.cat(parts, dim=1)
 
+        def reference_source_mask_patch(q, k, v, pe, attn_mask, extra_options):
+            ref_tokens = extra_options.get("reference_image_num_tokens", []) or []
+            img_slice = extra_options.get("img_slice")
+            if not ref_tokens or img_slice is None:
+                return {"q": q, "k": k, "v": v, "pe": pe, "attn_mask": attn_mask}
+
+            total_seq = int(k.shape[2])
+            total_ref = int(sum(ref_tokens))
+            slices = selected_ref_slices(ref_tokens, total_seq - total_ref)
+            allow = torch.ones((k.shape[0], total_seq), dtype=torch.bool, device=k.device)
+            changed = False
+            for ref_id, start, end in slices:
+                idx = mask_indices(ref_id, end - start, k.device)
+                if idx is None:
+                    continue
+                allow[:, start:end] = False
+                if idx.numel() > 0:
+                    allow[:, start + idx.to(torch.long)] = True
+                changed = True
+
+            if not changed:
+                return {"q": q, "k": k, "v": v, "pe": pe, "attn_mask": attn_mask}
+
+            key_allow = allow[:, None, None, :]
+            if attn_mask is None:
+                combined_mask = key_allow
+            elif attn_mask.dtype == torch.bool:
+                existing = attn_mask
+                if existing.ndim == 2:
+                    if existing.shape[0] == k.shape[0] and existing.shape[1] == total_seq:
+                        existing = existing[:, None, None, :]
+                    else:
+                        existing = existing[None, None, :, :]
+                elif existing.ndim == 3:
+                    existing = existing[:, None, :, :]
+                combined_mask = existing & key_allow
+            else:
+                existing = attn_mask
+                if existing.ndim == 2:
+                    if existing.shape[0] == k.shape[0] and existing.shape[1] == total_seq:
+                        existing = existing[:, None, None, :]
+                    else:
+                        existing = existing[None, None, :, :]
+                elif existing.ndim == 3:
+                    existing = existing[:, None, :, :]
+                source_bias = torch.zeros(
+                    (k.shape[0], 1, 1, total_seq),
+                    dtype=existing.dtype,
+                    device=k.device,
+                )
+                source_bias.masked_fill_(~key_allow, torch.finfo(existing.dtype).min)
+                combined_mask = existing + source_bias
+
+            return {"q": q, "k": k, "v": v, "pe": pe, "attn_mask": combined_mask}
+
         def pull_delta(gen: torch.Tensor, ref: torch.Tensor, strength: float):
             if strength <= 0.0 or ref is None or ref.shape[1] <= 0:
                 return None
@@ -1200,12 +1263,15 @@ class IdentityFeatureTransferFinal:
             print(
                 "[IdentityFeatureTransferFinal] "
                 f"preset={preset} sim={sim_floor:.4f} temp={temperature:.4f} "
+                f"mask_behavior={mask_behavior} "
                 f"mask={mask_threshold:.2f} "
                 f"double={double_map} single={single_map} "
                 f"sigma_aware={sigma_schedule is not None}"
             )
 
         m.set_model_attn1_output_patch(output_patch)
+        if mask_behavior == "zero_unmasked_tokens" and any(mask is not None for mask in masks):
+            m.set_model_attn1_patch(reference_source_mask_patch)
         return (m,)
 
 
