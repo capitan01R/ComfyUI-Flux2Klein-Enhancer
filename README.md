@@ -1,7 +1,6 @@
 # ComfyUI-Flux2Klein-Enhancer
 
 [![Buy Me A Coffee](https://img.shields.io/badge/Buy%20Me%20A%20Coffee-Support-yellow.svg)](https://buymeacoffee.com/capitan01r)
-[![License: PolyForm NC 1.0.0](https://img.shields.io/badge/License-PolyForm%20NC%201.0.0-blue.svg)](LICENSE)
 
 Conditioning, reference-latent, identity-transfer, color-control, and sampling tools for FLUX.2 Klein in ComfyUI.
 
